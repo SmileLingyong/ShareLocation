@@ -20,6 +20,7 @@ import com.baidu.mapapi.BMapManager;
 import com.baidu.mapapi.SDKInitializer;
 import com.baidu.mapapi.map.BaiduMap;
 import com.baidu.mapapi.map.BitmapDescriptor;
+import com.baidu.mapapi.map.BitmapDescriptorFactory;
 import com.baidu.mapapi.map.MapStatusUpdate;
 import com.baidu.mapapi.map.MapStatusUpdateFactory;
 import com.baidu.mapapi.map.MapView;
@@ -32,17 +33,12 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener{
 
-    // 定位相关
     public LocationClient mLocationClient;
     private TextView positionText;
-    private MapView mapView;
-    private BaiduMap baiduMap;      // BaiduMap类是地图的总控制器
-
-
-
     private ImageView actionRefersh;
     private ImageView actionRefershBg;
-
+    private MapView mapView;
+    private BaiduMap baiduMap;      // BaiduMap类是地图的总控制器
     private BDLocation location;
 
     private boolean isFirstLocate = true;   //是否首次定位
@@ -56,9 +52,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private float mCurrentX;
     private MyLocationConfiguration.LocationMode mLocationMode;
 
-    // 覆盖物相关
-    private BitmapDescriptor mMarker;
-    private RelativeLayout mMarkerLy;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -98,6 +91,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         // 点击按钮手动请求定位
         actionRefersh.setOnClickListener(this);
+
+        // 更改当前设备定位图标
+        BitmapDescriptor mCurrentMarker = BitmapDescriptorFactory.fromResource(R.drawable.icon_point);
+        MyLocationConfiguration configuration =new MyLocationConfiguration(MyLocationConfiguration.LocationMode.NORMAL,true,null);
+        baiduMap.setMyLocationConfigeration(configuration);
 
     }
 
