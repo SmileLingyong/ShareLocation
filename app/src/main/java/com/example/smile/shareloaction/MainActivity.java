@@ -2,13 +2,11 @@ package com.example.smile.shareloaction;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -22,31 +20,34 @@ import com.baidu.mapapi.BMapManager;
 import com.baidu.mapapi.SDKInitializer;
 import com.baidu.mapapi.map.BaiduMap;
 import com.baidu.mapapi.map.BitmapDescriptor;
-import com.baidu.mapapi.map.BitmapDescriptorFactory;
 import com.baidu.mapapi.map.MapStatusUpdate;
 import com.baidu.mapapi.map.MapStatusUpdateFactory;
 import com.baidu.mapapi.map.MapView;
-import com.baidu.mapapi.map.Marker;
-import com.baidu.mapapi.map.MarkerOptions;
 import com.baidu.mapapi.map.MyLocationConfiguration;
 import com.baidu.mapapi.map.MyLocationData;
-import com.baidu.mapapi.map.OverlayOptions;
 import com.baidu.mapapi.model.LatLng;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener{
 
     // 定位相关
     public LocationClient mLocationClient;
     private TextView positionText;
     private MapView mapView;
     private BaiduMap baiduMap;      // BaiduMap类是地图的总控制器
-    private boolean isFirstLocate = true;
+
+
 
     private ImageView actionRefersh;
     private ImageView actionRefershBg;
+
+    private BDLocation location;
+
+    private boolean isFirstLocate = true;   //是否首次定位
+    private boolean isRequest = false;      //是否点击请求定位按钮
+
 
 
     // 自定义定位图标
@@ -95,21 +96,15 @@ public class MainActivity extends AppCompatActivity {
             requestLocation();
         }
 
-
-        actionRefersh.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Toast.makeText(MainActivity.this, "定位到当前位置...", Toast.LENGTH_SHORT).show();
-            }
-        });
-
+        // 点击按钮手动请求定位
+        actionRefersh.setOnClickListener(this);
 
     }
 
 
-    // 该函数功能：用于显示设备当前位置与地图上
+    // 该函数功能：用于显示设备当前位置于地图上
     private void navigateTo(BDLocation location) {
-        if (isFirstLocate) {
+        if (isFirstLocate || isRequest) {
             Toast.makeText(this, "nav to " + location.getAddrStr(), Toast.LENGTH_SHORT).show();
             // 获取经纬度信息，并将其存入LatLng对象之中，然后调用MapStatusUpdateFactory的newLatLng()方法将LatLng对象传入。
             // 接着将返回的MapStatusUpdate对象，作为参数传入到BaiduMap的animateMapStatus()方法当中。
@@ -123,6 +118,7 @@ public class MainActivity extends AppCompatActivity {
             // isFirstLocate 该变量是为了防止多次调用animateMapStatus()方法，
             // 因为将地图移动到我们当前位置只需要在程序第一次定位的时候调用一次就可以了
             isFirstLocate = false;
+            isRequest = false;
 //            Toast.makeText(this, "正在调用navigateTo()方法", Toast.LENGTH_SHORT).show();
         }
 
@@ -155,7 +151,8 @@ public class MainActivity extends AppCompatActivity {
         option.setIsNeedAddress(true);
         option.setCoorType("bd09ll");  // 设置坐标类型，返回百度经纬度坐标系
         mLocationClient.setLocOption(option);
-        Toast.makeText(this, option.getCoorType(), Toast.LENGTH_SHORT).show();
+        // 显示当前获取位置类型
+//        Toast.makeText(this, option.getCoorType(), Toast.LENGTH_SHORT).show();
     }
 
 
@@ -204,10 +201,32 @@ public class MainActivity extends AppCompatActivity {
         baiduMap.setMyLocationEnabled(false);
     }
 
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()) {
+            case R.id.btn_action_location:
+                Toast.makeText(MainActivity.this, "定位到当前位置...", Toast.LENGTH_SHORT).show();
+                // 每当点击一次按钮，就将isRequest 改为true，以便后面调用navigateTo()方法，将地图移动到当前设备位置。
+                isRequest = true;
+                requestLocation();
+                break;
+
+            default:
+                break;
+        }
+
+    }
+
     public class MyLocationListener implements BDLocationListener {
 
         @Override      // 在这个方法中，我们可以获取到丰富的地理位置信息
         public void onReceiveLocation(BDLocation location) {
+            if (location == null) {
+                return;
+            }
+
+            MainActivity.this.location = location;
+
             StringBuilder currentPosition = new StringBuilder();
             currentPosition.append("纬度：").append(location.getLatitude()).append("\n");
             currentPosition.append("经线：").append(location.getLongitude()).append("\n");
@@ -222,18 +241,19 @@ public class MainActivity extends AppCompatActivity {
             } else if (location.getLocType() == BDLocation.TypeNetWorkLocation) {
                 currentPosition.append("网络");
             }
+
+            // 将当前获取到的设备位置信息显示在 TextView上
             positionText.setText(currentPosition);
+            // 调用navigateTo()函数，将设备显示于地图之上
             if (location.getLocType() == BDLocation.TypeGpsLocation
                     || location.getLocType() == BDLocation.TypeNetWorkLocation) {
                 navigateTo(location);
             }
 
-
-
-
         }
-
     }
+
+
 
 }
 
