@@ -6,6 +6,11 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -13,12 +18,19 @@ import com.baidu.location.BDLocation;
 import com.baidu.location.BDLocationListener;
 import com.baidu.location.LocationClient;
 import com.baidu.location.LocationClientOption;
+import com.baidu.mapapi.BMapManager;
 import com.baidu.mapapi.SDKInitializer;
 import com.baidu.mapapi.map.BaiduMap;
+import com.baidu.mapapi.map.BitmapDescriptor;
+import com.baidu.mapapi.map.BitmapDescriptorFactory;
 import com.baidu.mapapi.map.MapStatusUpdate;
 import com.baidu.mapapi.map.MapStatusUpdateFactory;
 import com.baidu.mapapi.map.MapView;
+import com.baidu.mapapi.map.Marker;
+import com.baidu.mapapi.map.MarkerOptions;
+import com.baidu.mapapi.map.MyLocationConfiguration;
 import com.baidu.mapapi.map.MyLocationData;
+import com.baidu.mapapi.map.OverlayOptions;
 import com.baidu.mapapi.model.LatLng;
 
 import java.util.ArrayList;
@@ -26,11 +38,26 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
+    // 定位相关
     public LocationClient mLocationClient;
     private TextView positionText;
     private MapView mapView;
     private BaiduMap baiduMap;      // BaiduMap类是地图的总控制器
     private boolean isFirstLocate = true;
+
+    private ImageView actionRefersh;
+    private ImageView actionRefershBg;
+
+
+    // 自定义定位图标
+    private BMapManager mBMapMannager;
+    private BitmapDescriptor mIconLocation;
+    private float mCurrentX;
+    private MyLocationConfiguration.LocationMode mLocationMode;
+
+    // 覆盖物相关
+    private BitmapDescriptor mMarker;
+    private RelativeLayout mMarkerLy;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,6 +75,8 @@ public class MainActivity extends AppCompatActivity {
         baiduMap = mapView.getMap();            // 获取到BaiduMap的实例
         baiduMap.setMyLocationEnabled(true);    // 开启显示用户当前位置在地图上的功能
         positionText = (TextView) findViewById(R.id.position_text_view);
+        actionRefersh = (ImageView) findViewById(R.id.btn_action_location);
+        actionRefershBg = (ImageView) findViewById(R.id.btn_action_location_bg);
 
         List<String> permissionList = new ArrayList<>();
         if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -65,6 +94,16 @@ public class MainActivity extends AppCompatActivity {
         } else {
             requestLocation();
         }
+
+
+        actionRefersh.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Toast.makeText(MainActivity.this, "定位到当前位置...", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+
     }
 
 
@@ -79,12 +118,12 @@ public class MainActivity extends AppCompatActivity {
             baiduMap.animateMapStatus(update);
             // 通过调用MapStatusUpdateFactory的zoomTo()方法，设置缩放级别，返回一个MapStatusUpdate对象
             // 并将其作为参数传入到BaiduMap的animateMapStatus()方法当中，实现地图的缩放。
-            update = MapStatusUpdateFactory.zoomTo(16f);
+            update = MapStatusUpdateFactory.zoomTo(21f);
             baiduMap.animateMapStatus(update);
             // isFirstLocate 该变量是为了防止多次调用animateMapStatus()方法，
             // 因为将地图移动到我们当前位置只需要在程序第一次定位的时候调用一次就可以了
             isFirstLocate = false;
-            Toast.makeText(this, "正在调用navigateTo()方法", Toast.LENGTH_SHORT).show();
+//            Toast.makeText(this, "正在调用navigateTo()方法", Toast.LENGTH_SHORT).show();
         }
 
         // MyLocationData.Builder类是用来封装设备当前所在位置的，把要封装的信息都设置完毕后，
@@ -96,7 +135,7 @@ public class MainActivity extends AppCompatActivity {
         locationBuilder.longitude(location.getLongitude());
         MyLocationData locationData = locationBuilder.build();
         baiduMap.setMyLocationData(locationData);
-        Toast.makeText(this, "在地图上绘制设备位置", Toast.LENGTH_SHORT).show();
+//        Toast.makeText(this, "在地图上绘制设备位置", Toast.LENGTH_SHORT).show();
     }
 
 
@@ -112,9 +151,11 @@ public class MainActivity extends AppCompatActivity {
     // 然后调用它的setScanSpan()方法来设置更新的间隔
     private void initLocation(){
         LocationClientOption option = new LocationClientOption();
-        option.setScanSpan(5000);
+        option.setScanSpan(1000);
         option.setIsNeedAddress(true);
+        option.setCoorType("bd09ll");  // 设置坐标类型，返回百度经纬度坐标系
         mLocationClient.setLocOption(option);
+        Toast.makeText(this, option.getCoorType(), Toast.LENGTH_SHORT).show();
     }
 
 
@@ -141,6 +182,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+
     // 重写 onResume()、onPause()、onDestory() 3个方法，对MapView进行管理，以保证资源能够及时的得到释放。
     @Override
     protected void onResume() {
@@ -166,25 +208,29 @@ public class MainActivity extends AppCompatActivity {
 
         @Override      // 在这个方法中，我们可以获取到丰富的地理位置信息
         public void onReceiveLocation(BDLocation location) {
-//            StringBuilder currentPosition = new StringBuilder();
-//            currentPosition.append("纬度：").append(location.getLatitude()).append("\n");
-//            currentPosition.append("经线：").append(location.getLongitude()).append("\n");
-//            currentPosition.append("国家：").append(location.getCountry()).append("\n");
-//            currentPosition.append("省：").append(location.getProvince()).append("\n");
-//            currentPosition.append("市：").append(location.getCity()).append("\n");
-//            currentPosition.append("区：").append(location.getDistrict()).append("\n");
-//            currentPosition.append("街道：").append(location.getStreet()).append("\n");
-//            currentPosition.append("定位方式：");
-//            if (location.getLocType() == BDLocation.TypeGpsLocation) {
-//                currentPosition.append("GPS");
-//            } else if (location.getLocType() == BDLocation.TypeNetWorkLocation) {
-//                currentPosition.append("网络");
-//            }
-//            positionText.setText(currentPosition);
+            StringBuilder currentPosition = new StringBuilder();
+            currentPosition.append("纬度：").append(location.getLatitude()).append("\n");
+            currentPosition.append("经线：").append(location.getLongitude()).append("\n");
+            currentPosition.append("国家：").append(location.getCountry()).append("\n");
+            currentPosition.append("省：").append(location.getProvince()).append("\n");
+            currentPosition.append("市：").append(location.getCity()).append("\n");
+            currentPosition.append("区：").append(location.getDistrict()).append("\n");
+            currentPosition.append("街道：").append(location.getStreet()).append("\n");
+            currentPosition.append("定位方式：");
+            if (location.getLocType() == BDLocation.TypeGpsLocation) {
+                currentPosition.append("GPS");
+            } else if (location.getLocType() == BDLocation.TypeNetWorkLocation) {
+                currentPosition.append("网络");
+            }
+            positionText.setText(currentPosition);
             if (location.getLocType() == BDLocation.TypeGpsLocation
                     || location.getLocType() == BDLocation.TypeNetWorkLocation) {
                 navigateTo(location);
             }
+
+
+
+
         }
 
     }
