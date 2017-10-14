@@ -8,7 +8,6 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.ImageView;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -102,8 +101,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     // 该函数功能：用于显示设备当前位置于地图上
     private void navigateTo(BDLocation location) {
-        if (isFirstLocate || isRequest) {
-            Toast.makeText(this, "nav to " + location.getAddrStr(), Toast.LENGTH_SHORT).show();
+        // 第一次启动时，显示当前设备位置
+        if (isFirstLocate) {
             // 获取经纬度信息，并将其存入LatLng对象之中，然后调用MapStatusUpdateFactory的newLatLng()方法将LatLng对象传入。
             // 接着将返回的MapStatusUpdate对象，作为参数传入到BaiduMap的animateMapStatus()方法当中。
             LatLng ll = new LatLng(location.getLatitude(), location.getLongitude());
@@ -116,20 +115,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             // isFirstLocate 该变量是为了防止多次调用animateMapStatus()方法，
             // 因为将地图移动到我们当前位置只需要在程序第一次定位的时候调用一次就可以了
             isFirstLocate = false;
+        }
+
+        // 点击请求按钮时做的处理
+        if (isRequest) {
+            LatLng ll = new LatLng(location.getLatitude(), location.getLongitude());
+            MapStatusUpdate update = MapStatusUpdateFactory.newLatLng(ll);
+            baiduMap.animateMapStatus(update);
             isRequest = false;
-//            Toast.makeText(this, "正在调用navigateTo()方法", Toast.LENGTH_SHORT).show();
         }
 
         // MyLocationData.Builder类是用来封装设备当前所在位置的，把要封装的信息都设置完毕后，
         // 调用build()方法，会返回一个MyLocationData实例。
         // 然后再将该实例传入到BaiduMap的setMyLocationData()方法中，就可以让设备当前位置显示在地图上了
-        MyLocationData.Builder locationBuilder = new MyLocationData.
-                Builder();
+        MyLocationData.Builder locationBuilder = new MyLocationData.Builder();
         locationBuilder.latitude(location.getLatitude());
         locationBuilder.longitude(location.getLongitude());
         MyLocationData locationData = locationBuilder.build();
         baiduMap.setMyLocationData(locationData);
-//        Toast.makeText(this, "在地图上绘制设备位置", Toast.LENGTH_SHORT).show();
     }
 
 
@@ -243,8 +246,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             // 将当前获取到的设备位置信息显示在 TextView上
             positionText.setText(currentPosition);
             // 调用navigateTo()函数，将设备显示于地图之上
-            if (location.getLocType() == BDLocation.TypeGpsLocation
-                    || location.getLocType() == BDLocation.TypeNetWorkLocation) {
+            if (location.getLocType() == BDLocation.TypeGpsLocation || location.getLocType() == BDLocation.TypeNetWorkLocation) {
                 navigateTo(location);
             }
 
