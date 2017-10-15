@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/pop_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_alignParentBottom="true"
+    android:background="#f1ffffff"
+    android:gravity="center_horizontal"
+    android:orientation="vertical">
+
+
+    <Button
+        android:id="@+id/btn_dialog_single_loc"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#f1ffffff"
+        android:text="@string/btn_dialog_single_loc_name"
+        android:textColor="#030303"
+        android:textSize="15sp" />
+
+
+    <Button
+        android:id="@+id/btn_dialog_real_time_loc"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#f1ffffff"
+        android:text="@string/btn_dialog_real_time_loc_name"
+        android:textColor="#030303"
+        android:textSize="15sp" />
+
+
+</LinearLayout>

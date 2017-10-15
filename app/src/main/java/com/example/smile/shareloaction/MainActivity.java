@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -37,6 +38,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private ImageView actionRefersh;    // 更新按钮
     private ImageView actionRefershBg;  // 更新按钮背景
     private ImageView actionStartLocation;
+    private StartLocationDialog startLocationDialog;
 
     private MapView mapView;            // 显示地图的视图
     private BaiduMap baiduMap;          // BaiduMap类是地图的总控制器
@@ -208,8 +210,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 isRequest = true;
                 requestLocation();
                 break;
+
             case R.id.btn_action_start_location:
-                Toast.makeText(this, "共享定位", Toast.LENGTH_SHORT).show();
+                // 实例化startLocationDialog
+                startLocationDialog = new StartLocationDialog(MainActivity.this);
+                startLocationDialog.showAtLocation(mapView, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0);
                 break;
 
             default:
