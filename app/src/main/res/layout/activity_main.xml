@@ -8,8 +8,7 @@
         android:id="@+id/bmapView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:clickable="true">
-    </com.baidu.mapapi.map.MapView>
+        android:clickable="true"></com.baidu.mapapi.map.MapView>
 
     <TextView
         android:id="@+id/position_text_view"
@@ -40,8 +39,16 @@
             android:clickable="true"
             android:src="@drawable/ic_action_refresh_location" />
 
-
     </RelativeLayout>
+
+    <ImageView
+        android:id="@+id/btn_action_start_location"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerInParent="true"
+        android:layout_marginBottom="10dp"
+        android:src="@drawable/ic_action_start_location" />
 
 
 </RelativeLayout>

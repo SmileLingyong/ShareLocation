@@ -33,23 +33,17 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity implements View.OnClickListener{
 
     public LocationClient mLocationClient;
-    private TextView positionText;
-    private ImageView actionRefersh;
-    private ImageView actionRefershBg;
-    private MapView mapView;
-    private BaiduMap baiduMap;      // BaiduMap类是地图的总控制器
-    private BDLocation location;
+    private TextView positionText;      // 定位显示数据
+    private ImageView actionRefersh;    // 更新按钮
+    private ImageView actionRefershBg;  // 更新按钮背景
+    private ImageView actionStartLocation;
+
+    private MapView mapView;            // 显示地图的视图
+    private BaiduMap baiduMap;          // BaiduMap类是地图的总控制器
+    private BDLocation location;        // 全局BDLocation的引用
 
     private boolean isFirstLocate = true;   //是否首次定位
     private boolean isRequest = false;      //是否点击请求定位按钮
-
-
-
-    // 自定义定位图标
-    private BMapManager mBMapMannager;
-    private BitmapDescriptor mIconLocation;
-    private float mCurrentX;
-    private MyLocationConfiguration.LocationMode mLocationMode;
 
 
     @Override
@@ -70,6 +64,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         positionText = (TextView) findViewById(R.id.position_text_view);
         actionRefersh = (ImageView) findViewById(R.id.btn_action_location);
         actionRefershBg = (ImageView) findViewById(R.id.btn_action_location_bg);
+        actionStartLocation = (ImageView) findViewById(R.id.btn_action_start_location);
 
         List<String> permissionList = new ArrayList<>();
         if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -90,6 +85,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         // 点击按钮手动请求定位
         actionRefersh.setOnClickListener(this);
+        actionStartLocation.setOnClickListener(this);
 
         // 更改当前设备定位图标
         BitmapDescriptor mCurrentMarker = BitmapDescriptorFactory.fromResource(R.drawable.icon_point);
@@ -202,14 +198,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         baiduMap.setMyLocationEnabled(false);
     }
 
+    // 点击具体按钮响应事件
     @Override
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.btn_action_location:
-                Toast.makeText(MainActivity.this, "定位到当前位置...", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "定位到当前位置", Toast.LENGTH_SHORT).show();
                 // 每当点击一次按钮，就将isRequest 改为true，以便后面调用navigateTo()方法，将地图移动到当前设备位置。
                 isRequest = true;
                 requestLocation();
+                break;
+            case R.id.btn_action_start_location:
+                Toast.makeText(this, "共享定位", Toast.LENGTH_SHORT).show();
                 break;
 
             default:
