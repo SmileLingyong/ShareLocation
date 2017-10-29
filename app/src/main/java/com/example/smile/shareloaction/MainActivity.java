@@ -7,6 +7,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -43,8 +44,6 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, SensorEventListener {
 
     public LocationClient mLocationClient;
-    public boolean isSingleLocation = false;    // 是否点击单次共享
-    public boolean isRealTimeLocation = false;  // 是否点击实时共享
     List<LatLng> points = new ArrayList<LatLng>();    // 位置点集合
     Polyline mPolyline;    // 运动轨迹图层
     LatLng last = new LatLng(0, 0);    // 上一个定位点
@@ -53,7 +52,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private ImageView actionRefersh;    // 更新按钮
     private ImageView actionRefershBg;  // 更新按钮背景
     private ImageView actionShareLocation;
-    private StartLocationDialog startLocationDialog;
+    private ShareLocationDialog shareLocationDialog;
     private BitmapDescriptor icTraceStart;
     private BitmapDescriptor icTraceEnd;
     private MapView mapView;            // 显示地图的视图（View），它负责从服务端获取地图数据
@@ -62,7 +61,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private MyLocationData locData;     // 当前location位置数据
     private SensorManager mSensorManager;
     private boolean isFirstLocate = true;   //是否首次定位
+    private boolean isRealTimeLocationFirst = true; // 是否是实时定位第一次
     private boolean isRequest = false;      //是否点击请求定位按钮
+    private boolean isSingleLocation = false;    // 是否点击单次共享
+    private boolean isRealTimeLocation = false;  // 是否点击实时共享
+    private boolean isStopRealTimeLocation = false; // 是否停止实时定位
     private int mCurrentDirection = 0;  // 当前设备的方向
     private double mCurrentLat = 0.0;   // 当前设备的经度
     private double mCurrentLon = 0.0;   // 当前设备的纬度
@@ -77,9 +80,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         public void onClick(View v) {
 
             Toast.makeText(MainActivity.this, "单次共享", Toast.LENGTH_SHORT).show();
-
-            isSingleLocation = true;
-            startLocationDialog.dismiss();  // 销毁弹出框
+            requestLocation();  // 请求定位
+            isSingleLocation = true;    // 表示已经开启了单次共享功能
+            actionShareLocation.setImageResource(R.drawable.ic_action_stop_share_location); // 更改共享图标为停止共享样式
+            shareLocationDialog.dismiss();  // 销毁弹出框
         }
     };
     /**
@@ -90,8 +94,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void onClick(View v) {
             Toast.makeText(MainActivity.this, "实时共享", Toast.LENGTH_SHORT).show();
+            requestLocation();  // 请求定位
             isRealTimeLocation = true;
-            startLocationDialog.dismiss();  // 销毁弹出框
+            isRealTimeLocationFirst = true;
+            isStopRealTimeLocation = false; // 将停止实时共享标志位置为false
+            actionShareLocation.setImageResource(R.drawable.ic_action_stop_share_location); // 更改共享图标为停止共享样式
+            shareLocationDialog.dismiss();  // 销毁弹出框
         }
     };
 
@@ -249,9 +257,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
 
             case R.id.btn_action_start_location:
-                // 实例化startLocationDialog
-                startLocationDialog = new StartLocationDialog(MainActivity.this, singleLocationOnClick, realTimeLocationOnClick);
-                startLocationDialog.showAtLocation(mapView, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0);
+                if (isSingleLocation || isRealTimeLocation) {
+                    // 停止共享位置，并将共享位置图标复原
+
+
+                    // 将共享位置图标复原
+                    actionShareLocation.setImageResource(R.drawable.ic_action_share_location);
+
+                    // 将停止实时共享标志位置为true
+                    isStopRealTimeLocation = true;
+                    // 将共享位置的标志位都重置
+                    isSingleLocation = false;
+                    isRealTimeLocation = false;
+                } else {
+
+                    // 实例化shareLocationDialog
+                    shareLocationDialog = new ShareLocationDialog(MainActivity.this, singleLocationOnClick, realTimeLocationOnClick);
+                    shareLocationDialog.showAtLocation(mapView, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0);
+                }
                 break;
 
 
@@ -260,16 +283,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
 
     }
-
-    /**
-     * 设置共享位置按钮样式
-     */
-    public void setShareLocationStyle() {
-        if (isSingleLocation) {
-
-        }
-    }
-
 
     /**
      * 每次方向改变，重新给地图设置定位数据
@@ -403,69 +416,90 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             // 将当前获取到的设备位置信息显示在 TextView上
             positionText.setText(currentPosition);
 
+
             // 注意：这里只接受GPS点，需要在室外定位， 自己后来加上了可以使用网络定位
             if (location.getLocType() == BDLocation.TypeGpsLocation || location.getLocType() == BDLocation.TypeNetWorkLocation) {
 
-                // 首次定位
+                // 如果停止服务了，则将最后的终点坐标画在地图上
+                if (isStopRealTimeLocation) {
+                    OverlayOptions endOptions = new MarkerOptions().position(last)
+                            .icon(icTraceEnd).zIndex(9).draggable(true);
+                    baiduMap.addOverlay(endOptions);
+                    isRealTimeLocation = false;
+                }
+
+
+                // 首次定位(只会执行一次)
                 if (isFirstLocate) {
                     LatLng ll = null;
-                    ll = getMostAccuracyLocation(location);
+                    ll = new LatLng(location.getLatitude(), location.getLongitude());
                     if (ll == null) {
                         return;
                     }
-                    isFirstLocate = false;
-                    points.add(ll); // 将第一个点加入轨迹集合
-                    last = ll;
-
                     // 显示当前定位点，并缩放地图
                     locateAndZoom(location, ll, true);
-
-                    //标记起点图层位置
-                    MarkerOptions oStart = new MarkerOptions();// 地图标记覆盖物参数配置类
-                    oStart.position(points.get(0));// 覆盖物位置点，第一个点为起点
-                    oStart.icon(icTraceStart);  // 设置覆盖物图片
-                    baiduMap.addOverlay(oStart); // 在地图上添加此图层
-
-                    return; //画轨迹最少得2个点，首地定位到这里就可以返回了
+                    isFirstLocate = false;
+                    return;
                 }
 
+                // 手动点击定位
                 if (isRequest) {
                     LatLng ll = new LatLng(location.getLatitude(), location.getLongitude());
                     MapStatusUpdate update = MapStatusUpdateFactory.newLatLng(ll);
-                    baiduMap.animateMapStatus(update);  // 将地图移动到我们指定的经纬度上
+                    baiduMap.animateMapStatus(update);  // 将地图移动到我们设备所在的经纬度上
                     isRequest = false;
                     return;
                 }
 
-                // 从第二个点开始
-                LatLng ll = new LatLng(location.getLatitude(), location.getLongitude());
-                // sdk回调gps位置的频率是1秒1个，位置点太近动态画在图上不是很明显，可以设置点之间距离大于为5米才添加到集合中
-                // 如果当前定位的点距上次的点有10米远，也不加入轨迹点集之中
-                if (DistanceUtil.getDistance(last, ll) < 5) {
-                    return;
+
+                if (isRealTimeLocation) {
+                    // 启动实时定位后，找一个比较稳定的点作为轨迹的起点
+                    if (isRealTimeLocationFirst) {
+                        LatLng ll = null;
+                        ll = getMostAccuracyLocation(location);
+                        if (ll == null) {
+                            return;
+                        }
+                        points.add(ll); // 将第一个点加入轨迹集合
+                        last = ll;
+                        // 显示当前定位点
+                        locateAndZoom(location, ll, false);
+                        isRealTimeLocationFirst = false;
+
+                        // 标记起点图层位置
+                        MarkerOptions oStart = new MarkerOptions();// 地图标记覆盖物参数配置类
+                        oStart.position(points.get(0));// 覆盖物位置点，第一个点为起点
+                        oStart.icon(icTraceStart);  // 设置覆盖物图片
+                        baiduMap.addOverlay(oStart); // 在地图上添加此图层
+                        return; // 画轨迹最少得2个点，首地定位到这里就可以返回了
+                    }
+
+                    // 从第二个点开始
+                    LatLng ll = new LatLng(location.getLatitude(), location.getLongitude());
+                    // sdk回调gps位置的频率是1秒1个，位置点太近动态画在图上不是很明显，可以设置点之间距离大于为5米才添加到集合中
+                    // 如果当前定位的点距上次的点有10米远，也不加入轨迹点集之中
+                    if (DistanceUtil.getDistance(last, ll) < 5) {
+                        return;
+                    }
+                    points.add(ll);//如果要运动完成后画整个轨迹，位置点都在这个集合中
+                    last = ll;
+
+                    // 显示当前定位点，不缩放地图
+                    locateAndZoom(location, ll, false);
+                    // 清除上一次轨迹，避免重叠绘画
+                    mapView.getMap().clear();
+
+                    // 起始点图层也会被清除，重新绘画
+                    MarkerOptions oStart = new MarkerOptions();
+                    oStart.position(points.get(0));
+                    oStart.icon(icTraceStart);
+                    baiduMap.addOverlay(oStart);
+
+                    // 将points集合中的点绘制轨迹线条图层，显示在地图上
+                    OverlayOptions ooPolyline = new PolylineOptions().width(13).color(0xAAFF0000).points(points);
+                    mPolyline = (Polyline) baiduMap.addOverlay(ooPolyline);
                 }
-                points.add(ll);//如果要运动完成后画整个轨迹，位置点都在这个集合中
-
-                last = ll;
-
-                // 显示当前定位点，不缩放地图
-                locateAndZoom(location, ll, false);
-                // 清除上一次轨迹，避免重叠绘画
-                mapView.getMap().clear();
-
-                // 起始点图层也会被清除，重新绘画
-                MarkerOptions oStart = new MarkerOptions();
-                oStart.position(points.get(0));
-                oStart.icon(icTraceStart);
-                baiduMap.addOverlay(oStart);
-
-                // 将points集合中的点绘制轨迹线条图层，显示在地图上
-                OverlayOptions ooPolyline = new PolylineOptions().width(13).color(0xAAFF0000).points(points);
-                mPolyline = (Polyline) baiduMap.addOverlay(ooPolyline);
             }
-
         }
     }
-
 }
-

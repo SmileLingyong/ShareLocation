@@ -49,7 +49,7 @@
         android:layout_alignParentBottom="true"
         android:layout_centerInParent="true"
         android:layout_marginBottom="8dp"
-        android:src="@drawable/ic_action_start_location" >
+        android:src="@drawable/ic_action_share_location" >
     </ImageView>
 
 

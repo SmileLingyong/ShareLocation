@@ -23,7 +23,7 @@ import android.widget.Toast;
  */
 
 
-public class StartLocationDialog extends PopupWindow {
+public class ShareLocationDialog extends PopupWindow {
 
 
     private Button singleLocationBtnDialog;
@@ -33,7 +33,7 @@ public class StartLocationDialog extends PopupWindow {
 
     // 注意：这里我们为了测试方便，就没有写三个参数的构造函数。具体参考BaiduTrack项目！！！
     @SuppressLint({"InflateParams", "ClickableViewAccessibility"})
-    public StartLocationDialog(final Activity context, OnClickListener singleLocationListener, OnClickListener realTimeLocationListener) {
+    public ShareLocationDialog(final Activity context, OnClickListener singleLocationListener, OnClickListener realTimeLocationListener) {
         super(context);
         LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         mMenuView = inflater.inflate(R.layout.dialog_start_location, null);
