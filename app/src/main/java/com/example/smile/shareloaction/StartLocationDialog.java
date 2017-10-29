@@ -14,6 +14,8 @@ import android.widget.Button;
 import android.widget.PopupWindow;
 import android.widget.Toast;
 
+import com.example.smile.shareloaction.R;
+
 
 /**
  * Created by lly54 on 2017/10/15.
@@ -23,9 +25,12 @@ import android.widget.Toast;
 
 public class StartLocationDialog extends PopupWindow {
 
+    public boolean isSingleLocation = false;
+    public boolean isRealTimeLocation = false;
     private Button singleLocationBtnDialog;
     private Button realTimeLocationBtnDialog;
     private View mMenuView;
+
 
     // 注意：这里我们为了测试方便，就没有写三个参数的构造函数。具体参考BaiduTrack项目
     @SuppressLint({"InflateParams", "ClickableViewAccessibility"})
@@ -62,7 +67,9 @@ public class StartLocationDialog extends PopupWindow {
         singleLocationBtnDialog.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
+
                 Toast.makeText(context, "单次共享", Toast.LENGTH_SHORT).show();
+                isSingleLocation = true;
                 dismiss();  // 销毁弹出框
             }
         });
@@ -72,6 +79,7 @@ public class StartLocationDialog extends PopupWindow {
             @Override
             public void onClick(View v) {
                 Toast.makeText(context, "实时共享", Toast.LENGTH_SHORT).show();
+                isRealTimeLocation = true;
                 dismiss();  // 销毁弹出框
             }
         });
