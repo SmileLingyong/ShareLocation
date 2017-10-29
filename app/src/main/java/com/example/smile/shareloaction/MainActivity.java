@@ -43,14 +43,16 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, SensorEventListener {
 
     public LocationClient mLocationClient;
-    List<LatLng> points = new ArrayList<LatLng>();	// 位置点集合
-    Polyline mPolyline;	// 运动轨迹图层
-    LatLng last = new LatLng(0, 0);	// 上一个定位点
+    public boolean isSingleLocation = false;    // 是否点击单次共享
+    public boolean isRealTimeLocation = false;  // 是否点击实时共享
+    List<LatLng> points = new ArrayList<LatLng>();    // 位置点集合
+    Polyline mPolyline;    // 运动轨迹图层
+    LatLng last = new LatLng(0, 0);    // 上一个定位点
     MapStatus.Builder builder;  // 用于构建当前设备点的位置信息
     private TextView positionText;      // 定位显示数据
     private ImageView actionRefersh;    // 更新按钮
     private ImageView actionRefershBg;  // 更新按钮背景
-    private ImageView actionStartLocation;
+    private ImageView actionShareLocation;
     private StartLocationDialog startLocationDialog;
     private BitmapDescriptor icTraceStart;
     private BitmapDescriptor icTraceEnd;
@@ -66,6 +68,32 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private double mCurrentLon = 0.0;   // 当前设备的纬度
     private double lastX;   // 记录上一次的设备在x轴方向的位置
     private float mCurrentZoom = 18f;   // 默认地图缩放比例
+    /**
+     * 单次共享监听类
+     */
+    private View.OnClickListener singleLocationOnClick = new View.OnClickListener() {
+
+        @Override
+        public void onClick(View v) {
+
+            Toast.makeText(MainActivity.this, "单次共享", Toast.LENGTH_SHORT).show();
+
+            isSingleLocation = true;
+            startLocationDialog.dismiss();  // 销毁弹出框
+        }
+    };
+    /**
+     * 实时共享监听类
+     */
+    private View.OnClickListener realTimeLocationOnClick = new View.OnClickListener() {
+
+        @Override
+        public void onClick(View v) {
+            Toast.makeText(MainActivity.this, "实时共享", Toast.LENGTH_SHORT).show();
+            isRealTimeLocation = true;
+            startLocationDialog.dismiss();  // 销毁弹出框
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,7 +105,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     /**
-     *  初始化各种布局文件，并注册获取地址监听器
+     * 初始化各种布局文件，并注册获取地址监听器
      */
     private void initView() {
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);// 获取传感器管理服务
@@ -89,7 +117,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         positionText = (TextView) findViewById(R.id.position_text_view);
         actionRefersh = (ImageView) findViewById(R.id.btn_action_location);
         actionRefershBg = (ImageView) findViewById(R.id.btn_action_location_bg);
-        actionStartLocation = (ImageView) findViewById(R.id.btn_action_start_location);
+        actionShareLocation = (ImageView) findViewById(R.id.btn_action_start_location);
 
         icTraceStart = BitmapDescriptorFactory.fromResource(R.drawable.ic_trace_start); // 起点图标
         icTraceEnd = BitmapDescriptorFactory.fromResource(R.drawable.ic_trace_end);     // 终点图标
@@ -109,9 +137,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 com.baidu.mapapi.map.MyLocationConfiguration.LocationMode.NORMAL, true, null));
 
         actionRefersh.setOnClickListener(this);         // 点击按钮手动请求定位
-        actionStartLocation.setOnClickListener(this);   // 共享位置按钮
+        actionShareLocation.setOnClickListener(this);   // 共享位置按钮
     }
-
 
     /**
      * 请求获取设备权限，当设备权限都获取成功后，再请求开启定位功能
@@ -162,7 +189,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-
     /**
      * 设置定位的相应参数，并开始定位
      */
@@ -181,9 +207,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mLocationClient.start(); // 通过调用LocationClient的start()方法开始定位功能。
     }
 
-
     /**
      * 用于显示设备在地图上，并缩放地图
+     *
      * @param location
      */
     private void locateAndZoom(final BDLocation location, LatLng ll, boolean isZoom) {
@@ -207,9 +233,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
-
     /**
      * 点击具体按钮相应事件
+     *
      * @param v
      */
     @Override
@@ -224,9 +250,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             case R.id.btn_action_start_location:
                 // 实例化startLocationDialog
-                startLocationDialog = new StartLocationDialog(MainActivity.this);
+                startLocationDialog = new StartLocationDialog(MainActivity.this, singleLocationOnClick, realTimeLocationOnClick);
                 startLocationDialog.showAtLocation(mapView, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0);
                 break;
+
 
             default:
                 break;
@@ -235,7 +262,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     /**
+     * 设置共享位置按钮样式
+     */
+    public void setShareLocationStyle() {
+        if (isSingleLocation) {
+
+        }
+    }
+
+
+    /**
      * 每次方向改变，重新给地图设置定位数据
+     *
      * @param sensorEvent
      */
     @Override
@@ -267,12 +305,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     /**
      * 首次定位很重要，选一个精度相对较高的起始点
      * 注意：如果一直显示gps信号弱，说明过滤的标准过高了，
-     你可以将location.getRadius()>25中的过滤半径调大，比如>40，
-     并且将连续5个点之间的距离DistanceUtil.getDistance(last, ll ) > 5也调大一点，比如>10，
-     这里不是固定死的，你可以根据你的需求调整，如果你的轨迹刚开始效果不是很好，你可以将半径调小，两点之间距离也调小，
-     gps的精度半径一般是10-50米
+     * 你可以将location.getRadius()>25中的过滤半径调大，比如>40，
+     * 并且将连续5个点之间的距离DistanceUtil.getDistance(last, ll ) > 5也调大一点，比如>10，
+     * 这里不是固定死的，你可以根据你的需求调整，如果你的轨迹刚开始效果不是很好，你可以将半径调小，两点之间距离也调小，
+     * gps的精度半径一般是10-50米
      */
-    private LatLng getMostAccuracyLocation(BDLocation location){
+    private LatLng getMostAccuracyLocation(BDLocation location) {
 
         if (location.getRadius() > 40) { // gps位置精度大于40米的点直接弃用
             return null;
@@ -280,7 +318,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         LatLng ll = new LatLng(location.getLatitude(), location.getLongitude());
 
-        if (DistanceUtil.getDistance(last, ll ) > 10) {
+        if (DistanceUtil.getDistance(last, ll) > 10) {
             last = ll;
             points.clear(); // 有任意连续两点位置大于10，重新取点
             return null;
@@ -288,7 +326,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         points.add(ll);
         last = ll;
         //有5个连续的点之间的距离小于10，认为gps已稳定，以最新的点为起始点
-        if(points.size() >= 5){
+        if (points.size() >= 5) {
             points.clear();
             return ll;
         }
@@ -403,7 +441,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 LatLng ll = new LatLng(location.getLatitude(), location.getLongitude());
                 // sdk回调gps位置的频率是1秒1个，位置点太近动态画在图上不是很明显，可以设置点之间距离大于为5米才添加到集合中
                 // 如果当前定位的点距上次的点有10米远，也不加入轨迹点集之中
-                if (DistanceUtil.getDistance(last, ll) < 5 ) {
+                if (DistanceUtil.getDistance(last, ll) < 5) {
                     return;
                 }
                 points.add(ll);//如果要运动完成后画整个轨迹，位置点都在这个集合中
